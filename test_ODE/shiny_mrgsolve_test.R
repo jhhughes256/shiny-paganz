@@ -112,25 +112,31 @@
 	)
 
 	oral.dose.times <- c(1,seq(from = 12,to = 120,by = 12))
-	input.conc.data$amt[input.conc.data$time %in% oral.dose.times] <- 500
-	input.conc.data$evid[input.conc.data$time %in% oral.dose.times] <- 1
-	input.conc.data$rate[input.conc.data$time %in% oral.dose.times] <- 0
-	input.conc.data$cmt[input.conc.data$time %in% oral.dose.times] <- 1
+	oral.dose.data <- input.conc.data[input.conc.data$time %in% oral.dose.times,]
+	oral.dose.data$amt <- 500
+	oral.dose.data$evid <- 1
+	oral.dose.data$rate <- 0
+	oral.dose.data$cmt <- 1
 
 	iv.dose.times <- 0
-	input.conc.data$amt[input.conc.data$time %in% iv.dose.times] <- 500
-	input.conc.data$evid[input.conc.data$time %in% iv.dose.times] <- 1
-	input.conc.data$rate[input.conc.data$time %in% iv.dose.times] <- 0
-	input.conc.data$cmt[input.conc.data$time %in% iv.dose.times] <- 2
+	iv.dose.data <- input.conc.data[input.conc.data$time %in% iv.dose.times,]
+	iv.dose.data$amt <- 500
+	iv.dose.data$evid <- 1
+	iv.dose.data$rate <- 0
+	iv.dose.data$cmt <- 2
 
 	inf.dose.times <- 72
-	input.conc.data$amt[input.conc.data$time %in% inf.dose.times] <- 2000
-	input.conc.data$evid[input.conc.data$time %in% inf.dose.times] <- 1
-	input.conc.data$rate[input.conc.data$time %in% inf.dose.times] <- 200
-	input.conc.data$cmt[input.conc.data$time %in% inf.dose.times] <- 2
+	inf.dose.data <- input.conc.data[input.conc.data$time %in% inf.dose.times,]
+	inf.dose.data$amt <- 2000
+	inf.dose.data$evid <- 1
+	inf.dose.data$rate <- 200
+	inf.dose.data$cmt <- 2
+
+	input.conc.data <- rbind(input.conc.data,oral.dose.data,iv.dose.data,inf.dose.data)
+	input.conc.data <- input.conc.data[with(input.conc.data, order(input.conc.data$ID,input.conc.data$time)),]
 
 	conc.data <- mod %>% data_set(input.conc.data) %>% mrgsim()
-	conc.data <- as.data.frame(conc.data)	#Convert to a data frame so that it is more useful for me!
+	conc.data <- as.data.frame(conc.data)	# Convert to a data frame so that it is more useful for me!
 
 # ------------------------------------------------------------------------------
 # Plot results

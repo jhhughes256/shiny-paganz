@@ -26,13 +26,13 @@
 # Create a parameter dataframe with ID and parameter values for each individual
 
 # Define individual
-  n <- 10  #Number of "individuals"
+  n <- 1000  #Number of "individuals"
   ID <- seq(from = 1, to = n, by = 1)  #Simulation ID
-  WT <- 85  #Total body weight, kg
-  AGE <- 40  #Age, years
-  SECR <- 65  #Serum Creatinine, umol/L
+  WT <- 70  #Total body weight, kg
+  AGE <- 60  #Age, years
+  SECR <- 100  #Serum Creatinine, umol/L
   SEX <- 0  #Gender, Male (0) Female (1)
-  SMK <- 0  #Smoking Status, Not Current (0) Current (1)
+  SMOK <- 0  #Smoking Status, Not Current (0) Current (1)
 
 
 # Check demographics
@@ -81,13 +81,13 @@
   ETA3 <- ETAmat[,3]
 
 # Define covariate effects
-  SMKCOV <- 1
-  if(SMK == 1) SMKCOV <- SMKCOV + COV1
+  SMOKCOV <- 1
+  if(SMOK == 1) SMOKCOV <- SMOKCOV + COV1
   CRCL <- ((140 - AGE) * WT) / (SECR * 0.815)  # Male creatinine clearance
   if(SEX == 1) CRCL <- CRCL*0.85  #Female creatinine clearance
 
 # Define individual parameter values
-  CL <- CLPOP*exp(ETA1)*(WT/70)^0.75*SMKCOV*CRCL/90^COV2
+  CL <- CLPOP*exp(ETA1)*((WT/70)^0.75)*SMOKCOV*((CRCL/90)^COV2)
   V1 <- V1POP*exp(ETA2)*(WT/70)
   Q  <- QPOP*(WT/70)^0.75
   V2 <- V2POP*(WT/70)
@@ -99,7 +99,7 @@
   K10 <- CL/V1
 
 # Collect the individual parameter values in a parameter dataframe
-  par.data <- data.frame(ID,CL,V1,Q,V2,K12,K21,K10,WT,AGE,SECR,SEX,SMK)
+  par.data <- data.frame(ID,CL,V1,Q,V2,K12,K21,K10,WT,AGE,SECR,SEX,SMOK)
   head(par.data)
 
 #------------------------------------------------------------------------------
@@ -234,30 +234,30 @@
 # Draw some plots of the simulated data
 
 #Use custom ggplot2 theme
-#  theme_bw2 <- theme_set(theme_bw(base_size = 16))
-#  theme_bw2 <- theme_update(plot.margin = unit(c(1.1,1.1,3,1.1), "lines"),
-#  axis.title.x=element_text(size = 16, vjust = 0),
-#  axis.title.y=element_text(size = 16, vjust = 0, angle = 90),
-#  strip.text.x=element_text(size = 14),
-#  strip.text.y=element_text(size = 14, angle = 90))
+ theme_bw2 <- theme_set(theme_bw(base_size = 16))
+ theme_bw2 <- theme_update(plot.margin = unit(c(1.1,1.1,3,1.1), "lines"),
+ axis.title.x=element_text(size = 16, vjust = 0),
+ axis.title.y=element_text(size = 16, vjust = 0, angle = 90),
+ strip.text.x=element_text(size = 14),
+ strip.text.y=element_text(size = 14, angle = 90))
 
 #Factor covariate values (for example, SEX)
 #  sim.data$SEXf <- as.factor(sim.data$SEX)
 #  levels(sim.data$SEXf) <- c("Male","Female")
 
 #Function for calculating 5th and 95th percentiles for plotting concentrations
-#  CIlow <- function(x) quantile(x, probs = 0.05)
-#  CIhi <- function(x) quantile(x, probs = 0.95)
+ CIlow <- function(x) quantile(x, probs = 0.05)
+ CIhi <- function(x) quantile(x, probs = 0.95)
 
 #Generate a plot of the sim.data
-#  plotobj <- NULL
-#  plotobj <- ggplot(data = sim.data)
-#  plotobj <- plotobj + stat_summary(aes(x = time, y = DV), fun.ymin = CIlow, fun.ymax = CIhi, geom = "ribbon", fill = "blue", alpha = 0.2)
-#  plotobj <- plotobj + stat_summary(aes(x = time, y = IPRE), fun.ymin = CIlow, fun.ymax = CIhi, geom = "ribbon", fill = "red", alpha = 0.3)
-#  plotobj <- plotobj + stat_summary(aes(x = time, y = IPRE), fun.y = median, geom = "line", size = 1, colour = "red")
-#  plotobj <- plotobj + scale_y_continuous("Concentration (mg/L) \n")
-#  plotobj <- plotobj + scale_x_continuous("\nTime (hours)")
-#  print(plotobj)
+ plotobj <- NULL
+ plotobj <- ggplot(data = sim.data)
+ # plotobj <- plotobj + stat_summary(aes(x = time, y = DV), fun.ymin = CIlow, fun.ymax = CIhi, geom = "ribbon", fill = "blue", alpha = 0.2)
+ plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED), fun.ymin = CIlow, fun.ymax = CIhi, geom = "ribbon", fill = "red", alpha = 0.3)
+ plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED), fun.y = median, geom = "line", size = 1, colour = "red")
+ plotobj <- plotobj + scale_y_continuous("Concentration (mg/L) \n",breaks = seq(from = 0,to = 30,by = 5),lim = c(0,25))
+ plotobj <- plotobj + scale_x_continuous("\nTime (hours)",lim = c(0,120))
+ print(plotobj)
 
 #Facet for SEX
 #  plotobj1 <- plotobj + facet_wrap(~SEXf)

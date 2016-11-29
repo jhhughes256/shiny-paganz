@@ -27,6 +27,8 @@
 	TIME <- lapply(0:4, function(i) time.function(i))
 	TIME <- unique(unlist(TIME))
 
+	TIME <- seq(from = 0,to = 144,by = 0.25)
+
 # ------------------------------------------------------------------------------
 # Define the model parameters and equations
 	# Using mrgsolve - analytical solutions
@@ -134,9 +136,9 @@
 # Plot results
 	plotobj1 <- NULL
 	plotobj1 <- ggplot(conc.data)
-	plotobj1 <- plotobj1 + stat_summary(aes(x = time,y = IPRE),geom = "line",fun.y = median,colour = "red")
+	plotobj1 <- plotobj1 + stat_summary(aes(x = time,y = IPRE),geom = "line",fun.y = median,colour = "red",size = 1)
 	plotobj1 <- plotobj1 + stat_summary(aes(x = time,y = IPRE),geom = "ribbon",fun.ymin = "CI90lo",fun.ymax = "CI90hi",fill = "red",alpha = 0.3)
-	plotobj1 <- plotobj1 + scale_x_continuous("\nTime (hours)")
+	plotobj1 <- plotobj1 + scale_x_continuous("\nTime (hours)",lim = c(0,120))
 	# plotobj1 <- plotobj1 + scale_y_log10("Concentration (mg/L)\n")
-	plotobj1 <- plotobj1 + scale_y_continuous("Concentration (mg/L)\n")
+	plotobj1 <- plotobj1 + scale_y_continuous("Concentration (mg/L)\n",breaks = seq(from = 0,to = 30,by = 5),lim = c(0,25))
 	print(plotobj1)

@@ -46,14 +46,15 @@
 							POPKA = 0.5,	// Absorption rate constant, h^-1
 
 							// Covariate effects
-							COV1 = 0.5,	// Effect of gender on clearance
+							COV1 = 0.5,	// Effect of current smoking on clearance
 							COV2 = 1.15,	// Effect of creatinine clearance on clearance
 
 							// Default covariate values for simulation
 							WT = 70,	// Total body weight (kg)
 							SEX = 0,	// Gender - Male (0), Female (1)
 							AGE = 60,	// Age (years)
-							SECR = 100 // Serum creatinine, micromol/L
+							SECR = 100, // Serum creatinine, micromol/L
+							SMOK = 0	// Smoking status - Not current (0), Current (1)
 
 		$OMEGA		block = TRUE
 							labels = s(BSV_CL,BSV_V1,BSV_KA)
@@ -66,14 +67,14 @@
 							0.09	// Proportional error
 
 		$MAIN			// Covariate effects
-							double SEXCOV = 1;	// Male
-							if (SEX == 1) SEXCOV = 1 + COV1;	// Female
+							double SMOKCOV = 1;	// Not current smoker
+							if (SMOK == 1) SMOKCOV = 1 + COV1;	// Current smoker
 
 							double CRCL = ((140-AGE)*WT)/(SECR*0.815);	// Male creatinine clearance
-							if (SEX == 1) CRCL = ((140-AGE)*WT)/(SECR*0.815)*0.85;	// Female creatnine clearance
+							if (SEX == 1) CRCL = ((140-AGE)*WT)/(SECR*0.815)*0.85;	// Female creatinine clearance
 
 							// Individual parameter values
-							double CL = POPCL*pow(WT/70,0.75)*pow(CRCL/90,COV2)*SEXCOV*exp(BSV_CL);
+							double CL = POPCL*pow(WT/70,0.75)*pow(CRCL/90,COV2)*SMOKCOV*exp(BSV_CL);
 							double V1 = POPV1*(WT/70)*exp(BSV_V1);
 							double Q = POPQ*pow(WT/70,0.75);
 							double V2 = POPV2*(WT/70);

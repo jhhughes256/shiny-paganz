@@ -52,7 +52,8 @@
 							// Default covariate values for simulation
 							WT = 70,	// Total body weight (kg)
 							SEX = 0,	// Gender - Male (0), Female (1)
-							CRCL = 90	// Creatinine clearance (mL/min)
+							AGE = 60,	// Age (years)
+							SECR = 100 // Serum creatinine, micromol/L
 
 		$OMEGA		block = TRUE
 							labels = s(BSV_CL,BSV_V1,BSV_KA)
@@ -67,6 +68,9 @@
 		$MAIN			// Covariate effects
 							double SEXCOV = 1;	// Male
 							if (SEX == 1) SEXCOV = 1 + COV1;	// Female
+
+							double CRCL = ((140-AGE)*WT)/(SECR*0.815);	// Male creatinine clearance
+							if (SEX == 1) CRCL = ((140-AGE)*WT)/(SECR*0.815)*0.85;	// Female creatnine clearance
 
 							// Individual parameter values
 							double CL = POPCL*pow(WT/70,0.75)*pow(CRCL/90,COV2)*SEXCOV*exp(BSV_CL);
@@ -84,7 +88,7 @@
 		$TABLE		table(IPRE) = CENT/V1;
 							table(DV) = table(IPRE)*(1+ERR_PRO);
 
-		$CAPTURE	CL V1 Q V2 KA
+		$CAPTURE	CL V1 Q V2 KA CRCL
 		'
 	# Compile the model code
 		mod <- mcode("popDEMO",code)

@@ -1,16 +1,19 @@
 # R script for simulating a population and concentrations as described by:
 # 2-compartment model
 # Dosing regimen:
-
-# Population parameter variability on
-# Variance-covariance matrix for
+#   IV bolus    (at 0 hours)
+#   Oral Dosing (at 1 hours, then every 12 hours after IV bolus)
+#   IV Infusion (at 72 hours, duration 10 hours)
+# Population parameter variability on CL, V1, KA
+# Variance-covariance matrix for CL, V1, KA
 # Covariate effects:
+#   Gender & Creatinine Clearance on CL
 
-# Proportional and additive residual error model
+# Proportional error model (with optional additive residual)
 
 #------------------------------------------------------------------------------
 # Remove all current objects in the workspace
-  rm(list=ls(all=TRUE))
+  rm(list = ls(all = TRUE))
 
 # Load package libraries
   library(deSolve)  #Differential equation solver
@@ -66,24 +69,28 @@
 	EPS2SD <- 0  #Additional residual error (none for this model)
 
 # Calculate ETA values for each subject
-  CORR <- matrix(c(1,R12,R13,R12,1,R23,R13,R23,1),3,3)
+  cor.vec <- c(
+    1, R12, R13,
+    R12, 1, R23,
+    R13, R23, 1)
+  CORR <- matrix(cor.vec, 3, 3)
 
 # Specify the between subject variability for CL, V1, V2
-  SDVAL <- c(ETA1SD,ETA2SD,ETA3SD)
+  SDVAL <- c(ETA1SD, ETA2SD, ETA3SD)
 
 # Use this function to turn CORR and SDVAL into a covariance matrix
-  OMEGA <- cor2cov(CORR,SDVAL)
+  OMEGA <- cor2cov(CORR, SDVAL)
 
 # Now use multivariate rnorm to turn the covariance matrix into ETA values
-  ETAmat <- mvrnorm(n = n, mu = c(0,0,0), OMEGA)
-  ETA1 <- ETAmat[,1]
-  ETA2 <- ETAmat[,2]
-  ETA3 <- ETAmat[,3]
+  ETAmat <- mvrnorm(n = n, mu = c(0, 0, 0), OMEGA)
+  ETA1 <- ETAmat[, 1]
+  ETA2 <- ETAmat[, 2]
+  ETA3 <- ETAmat[, 3]
 
 # Define covariate effects
   SMOKCOV <- 1
   if(SMOK == 1) SMOKCOV <- SMOKCOV + COV1
-  CRCL <- ((140 - AGE) * WT) / (SECR * 0.815)  # Male creatinine clearance
+  CRCL <- ((140 - AGE)*WT)/(SECR*0.815)  # Male creatinine clearance
   if(SEX == 1) CRCL <- CRCL*0.85  #Female creatinine clearance
 
 # Define individual parameter values
@@ -99,7 +106,10 @@
   K10 <- CL/V1
 
 # Collect the individual parameter values in a parameter dataframe
-  par.data <- data.frame(ID,CL,V1,Q,V2,K12,K21,K10,WT,AGE,SECR,SEX,SMOK)
+  par.data <- data.frame(
+    ID, CL, V1, Q, V2,  #patient parameters
+    K12, K21, K10,  #rate constants
+    WT, AGE, SECR, SEX, SMOK)  #covariates
   head(par.data)
 
 #------------------------------------------------------------------------------
@@ -111,7 +121,7 @@
 # Specify oral doses
   #this uses the option to specify "events" in deSolve using a dataframe
 	oral.dose <- 500
-	oral.dose.times <- c(1,seq(from = 12, to = 120, by = 12))
+	oral.dose.times <- c(1, seq(from = 12, to = 120, by = 12))
 
 # Define bolus dose events
 	#below works for constant dosing
@@ -227,37 +237,41 @@
   nobs <- n*length(TIME)
   EPS1 <- rnorm(nobs, mean = 0, sd = EPS1SD)  #Proportional residual error
   EPS2 <- rnorm(nobs, mean = 0, sd = EPS2SD)  #Additive residual error
-  sim.data$DV <- sim.data$IPRED * (1 + EPS1) + EPS2
+  sim.data$DV <- sim.data$IPRED*(1 + EPS1) + EPS2
 
 #------------------------------------------------------------------------------
 ### Step 5
 # Draw some plots of the simulated data
 
-#Use custom ggplot2 theme
- theme_bw2 <- theme_set(theme_bw(base_size = 16))
- theme_bw2 <- theme_update(plot.margin = unit(c(1.1,1.1,3,1.1), "lines"),
- axis.title.x=element_text(size = 16, vjust = 0),
- axis.title.y=element_text(size = 16, vjust = 0, angle = 90),
- strip.text.x=element_text(size = 14),
- strip.text.y=element_text(size = 14, angle = 90))
+# Use custom ggplot2 theme
+  theme_bw2 <- theme_set(theme_bw(base_size = 16))
+  theme_bw2 <- theme_update(plot.margin = unit(c(1.1, 1.1, 3, 1.1), "lines"),
+  axis.title.x = element_text(size = 16, vjust = 0),
+  axis.title.y = element_text(size = 16, vjust = 0, angle = 90),
+  strip.text.x = element_text(size = 14),
+  strip.text.y = element_text(size = 14, angle = 90))
 
-#Factor covariate values (for example, SEX)
+# Factor covariate values (for example, SEX)
 #  sim.data$SEXf <- as.factor(sim.data$SEX)
 #  levels(sim.data$SEXf) <- c("Male","Female")
 
-#Function for calculating 5th and 95th percentiles for plotting concentrations
- CIlow <- function(x) quantile(x, probs = 0.05)
- CIhi <- function(x) quantile(x, probs = 0.95)
+# Function for calculating 5th and 95th percentiles for plotting concentrations
+  CIlow <- function(x) quantile(x, probs = 0.05)
+  CIhi <- function(x) quantile(x, probs = 0.95)
 
-#Generate a plot of the sim.data
- plotobj <- NULL
- plotobj <- ggplot(data = sim.data)
- # plotobj <- plotobj + stat_summary(aes(x = time, y = DV), fun.ymin = CIlow, fun.ymax = CIhi, geom = "ribbon", fill = "blue", alpha = 0.2)
- plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED), fun.ymin = CIlow, fun.ymax = CIhi, geom = "ribbon", fill = "red", alpha = 0.3)
- plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED), fun.y = median, geom = "line", size = 1, colour = "red")
- plotobj <- plotobj + scale_y_continuous("Concentration (mg/L) \n",breaks = seq(from = 0,to = 30,by = 5),lim = c(0,25))
- plotobj <- plotobj + scale_x_continuous("\nTime (hours)",lim = c(0,120))
- print(plotobj)
+# Generate a plot of the sim.data
+  plotobj <- NULL
+  plotobj <- ggplot(data = sim.data)
+#  plotobj <- plotobj + stat_summary(aes(x = time, y = DV), fun.ymin = CIlow,
+#    fun.ymax = CIhi, geom = "ribbon", fill = "blue", alpha = 0.2)
+  plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED), fun.ymin = CIlow,
+    fun.ymax = CIhi, geom = "ribbon", fill = "red", alpha = 0.3)
+  plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED),
+    fun.y = median, geom = "line", size = 1, colour = "red")
+  plotobj <- plotobj + scale_y_continuous("Concentration (mg/L) \n",
+    breaks = seq(from = 0, to = 30, by = 5),lim = c(0, 25))
+  plotobj <- plotobj + scale_x_continuous("\nTime (hours)", lim = c(0, 120))
+  print(plotobj)
 
 #Facet for SEX
 #  plotobj1 <- plotobj + facet_wrap(~SEXf)

@@ -15,7 +15,7 @@
 shinyServer(function(input, output, session) {
 # Reactive expression to generate a reactive data frame
 # Whenever an input changes this function re-evaluates
-	all.data <- reactive({
+	sim.data <- reactive({
 	# Create a parameter dataframe with ID and parameter values for each individual
 	# Define individual
 	  n <- input$n  #Number of "individuals"
@@ -54,13 +54,23 @@ shinyServer(function(input, output, session) {
 	  par.data <- data.frame(
 	    ID, CL, V1, Q, V2,  #patient parameters
 	    KA, K12, K21, K10,  #rate constants
-	    WT, AGE, SECR, SEX, SMOK)  #covariates
+	    WT, AGE, SECR, SEX, SMOK #covariates
+		)
 
 #------------------------------------------------------------------------------
 	# Specify oral doses
 	# this uses the option to specify "events" in deSolve using a dataframe
-		oral.dose <- input$podose
-		oral.dose.times <- c(1, seq(from = 12, to = 120, by = 24/input$potimes))
+		if (input$pocheck == FALSE) {
+			oral.dose <- 0
+			oral.dose.times <- 0
+		} else {
+			oral.dose <- input$podose
+			if (input$potimes == 1) pofreq <- 24
+			if (input$potimes == 2) pofreq <- 12
+			if (input$potimes == 3) pofreq <- 8
+			if (input$potimes == 4) pofreq <- 6
+			oral.dose.times <- seq(from = input$postart, to = 120, by = pofreq)
+		}
 
 	# Define bolus dose events
 	# below works for constant dosing
@@ -68,12 +78,18 @@ shinyServer(function(input, output, session) {
 			var = 1,  #enters into depot compartment (A[1])
 	    time = oral.dose.times,
 	    value = oral.dose,
-	    method = "add")
+	    method = "add"
+		)
 
 	# Specify bolus intravenous doses
 	# specifies "events" as seen in oral dosing
-	  iv.dose <- input$ivdose  #mg for first bolus dose
-	  iv.dose.times <- input$ivtimes  #time of first bolus (h)
+		if (input$ivcheck == FALSE) {
+			iv.dose <- 0
+			iv.dose.times <- 0
+		} else {
+			iv.dose <- input$ivdose  #mg for first bolus dose
+		  iv.dose.times <- input$ivtimes  #time of first bolus (h)
+		}
 
 	# Define bolus dose events
 		iv.dose.data <- data.frame(
@@ -88,15 +104,22 @@ shinyServer(function(input, output, session) {
 	# Define continuous infusion
 	  #this uses the approxfun function
 		#makes a "forcing function" for infusion rate in the differential equations
-	  inf.dose <- input$infdose  #mg
-	  inf.dur <- input$infdur   #hours
+		if (input$infcheck == FALSE) {
+			inf.dose <- 0
+			inf.dur <- 0
+			inf.start <- 0
+		} else {
+			inf.dose <- input$infdose  #mg
+		  if (input$infdur == 1) inf.dur <- 0.5   #hours
+			if (input$infdur == 2) inf.dur <- 2
+			inf.start <- input$inftimes
+		}
 	  inf.rate <- inf.dose/inf.dur
-		inf.start <- input$inftimes
 		inf.times <- c(inf.start, inf.start + inf.dur)
 
 	# Make a time sequence (hours)
 		all.times <- sort(unique(c(set.time, oral.dose.times, iv.dose.times, inf.times)))
-		final.time <- max(TIME)
+		final.time <- max(all.times)
 		#The time sequence must include all "event" times for deSolve, so added here
 		#Do not repeat a time so use "unique" as well
 
@@ -111,7 +134,7 @@ shinyServer(function(input, output, session) {
 	# Apply simulate.conc.cmpf to each individual in par.data
 	# Maintain their individual values for V1, SEX and WT for later calculations
 	  sim.data <- ddply(par.data, .(ID, V1), simulate.conc.cmpf,
-			event.data = all.dose.data, TIME = all.times,
+			event.data = all.dose.data, times = all.times,
 			inf.rate.fun = inf.rate.fun(inf.time.data, inf.rate.data))
 
 	# Calculate individual concentrations in the central compartment
@@ -119,7 +142,7 @@ shinyServer(function(input, output, session) {
 
 	# Use random number generator to simulate residuals from a normal distribution
 	  #no. of observations = no. of subjects * no. of time points per subject
-	  nobs <- n*length(TIME)
+	  nobs <- n*length(all.times)
 	  EPS1 <- rnorm(nobs, mean = 0, sd = EPS1SD)  #Proportional residual error
 	  EPS2 <- rnorm(nobs, mean = 0, sd = EPS2SD)  #Additive residual error
 	  sim.data$DV <- sim.data$IPRED*(1 + EPS1) + EPS2
@@ -129,10 +152,10 @@ shinyServer(function(input, output, session) {
 #----------------------------------------------------------------------------------------
 #Generate a plot of the data
 #Also uses the inputs to build the plot
-	output$plotCONC <- renderPlot({
+	output$plotconc <- renderPlot({
 	# Generate a plot of the sim.data
 	  plotobj <- NULL
-	  plotobj <- ggplot(data = sim.data)
+	  plotobj <- ggplot(data = sim.data())
 	#  plotobj <- plotobj + stat_summary(aes(x = time, y = DV), fun.ymin = CIlow,
 	#    fun.ymax = CIhi, geom = "ribbon", fill = "blue", alpha = 0.2)
 	  plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED), fun.ymin = CIlow,
@@ -140,13 +163,15 @@ shinyServer(function(input, output, session) {
 	  plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED),
 	    fun.y = median, geom = "line", size = 1, colour = "red")
 	  plotobj <- plotobj + scale_y_continuous("Concentration (mg/L) \n",
-	    breaks = seq(from = 0, to = 30, by = 5),lim = c(0, 25))
-	  plotobj <- plotobj + scale_x_continuous("\nTime (hours)", lim = c(0, 120))
+	    breaks = seq(from = 0, to = max(sim.data()$IPRED), by = ceiling(max(sim.data()$IPRED)/10)), lim = c(0, max(sim.data()$IPRED)))
+	  plotobj <- plotobj + scale_x_continuous("\nTime (hours)", lim = c(0, 120), breaks = seq(from = 0,to = 120,by = 24))
 	  print(plotobj)
 	})	#renderPlot
 
-	output$RATE <- renderText({
-		paste("Infusion rate =", signif(input$infdose/input$infdur, digits = 3) ,"mg/hr")
+	output$infrate <- renderText({
+		if (input$infdur == 1) inf.dur <- 0.5   #hours
+		if (input$infdur == 2) inf.dur <- 2
+		paste("Infusion rate =", signif(input$infdose/inf.dur, digits = 3) ,"mg/hr")
 	})	#renderText
 
 	#############
@@ -156,5 +181,16 @@ shinyServer(function(input, output, session) {
   session$onSessionEnded(function() {
     stopApp()
   })
-	
+
+	# Open console for R session
+	observe(label = "console", {
+		if(input$console != 0) {
+			options(browserNLdisabled = TRUE)
+			saved_console <- ".RDuetConsole"
+			if (file.exists(saved_console)) load(saved_console)
+			isolate(browser())
+			save(file = saved_console, list = ls(environment()))
+		}
+	})
+
 })	#shinyServer

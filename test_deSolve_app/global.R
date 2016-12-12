@@ -1,24 +1,18 @@
 # Globally used objects and functions
 # ------------------------------------------------------------------------------
 # Load package libraries
-	library(shiny)
-	library(ggplot2)
-	library(grid)
+	library(shiny)	#Interactive applications
+	library(ggplot2)	#Plotting
+	library(grid)	#Plotting
 	library(plyr)
 	library(reshape2)
-	library(deSolve)
+	library(deSolve)	#Differential equation solver
 	library(MASS)
 	library(MBESS)
-	library(compiler)
-	library(doParallel)
+	library(compiler)	#Compile repeatedly used functions
 
 # ggplot2 theme for plotting
 	theme_bw2 <- theme_set(theme_bw(base_size = 16))
-	theme_bw2 <- theme_update(plot.margin = unit(c(1.1, 1.1, 3, 1.1), "lines"),
-	axis.title.x = element_text(size = 16, vjust = 0),
-	axis.title.y = element_text(size = 16, vjust = 0, angle = 90),
-	strip.text.x = element_text(size = 14),
-	strip.text.y = element_text(size = 14, angle = 90))
 
 # Function for calculating 5th and 95th percentiles for plotting concentrations
 	CIlow <- function(x) quantile(x, probs = 0.05)
@@ -70,9 +64,9 @@
 	}
 
 # Function containing differential equations for amount in each compartment
-	DES <- function(T, A, THETA, inf.rate) {
+	DES <- function(T, A, THETA, inf.rate.fun) {
 
-	  RateC <- inf.rate(T)  #Infusion rate
+	  RateC <- inf.rate.fun(T)  #Infusion rate
 
 	  K12 <- THETA[1]
 	  K21 <- THETA[2]
@@ -92,7 +86,7 @@
   DES.cmpf <- cmpfun(DES)
 
 # Function for simulating concentrations for the ith patient
-  simulate.conc <- function(par.data, event.data, TIME, inf.rate) {
+  simulate.conc <- function(par.data, event.data, times, inf.rate.fun) {
 
   # List of parameters from input for the differential equation solver
     theta.list <- c(
@@ -105,8 +99,8 @@
     A_0 <- c(A1 = 0, A2 = 0, A3 = 0)
 
   # Run differential equation solver for simulated variability data
-    var.data <- lsoda(A_0, TIME, DES.cmpf, theta.list,
-			events = list(data = event.data), inf.rate = inf.rate)
+    var.data <- lsoda(A_0, times, DES.cmpf, theta.list,
+			events = list(data = event.data), inf.rate.fun = inf.rate.fun)
     var.data <- as.data.frame(var.data)
   }
 

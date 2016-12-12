@@ -2,7 +2,13 @@
 fixedPage(
 # Application Title and Logo
 	fixedRow(
-		h2("PAGANZ - Shiny Example App"),
+		column(2,
+			br(),
+			actionButton("console","Debug Console")
+		),
+		column(10,
+			h2("PAGANZ - Shiny Example App")
+		),
 		align = "center"
 	),	#fixedRow
 
@@ -21,12 +27,12 @@ fixedPage(
 		# Slider input for weight
 			numericInput("wt",
 				"Total body weight (kg):",
-				min = 0, max = 72, value = 12
+				min = 0, max = 150, value = 70
 			),  #numericInput
 		# Slider input for serum creatinine
 			numericInput("secr",
 				"Serum creatinine (µmol/L):",
-				min = 0, max = 72, value = 12, step = 6
+				min = 0, max = 400, value = 60, step = 1
 			),  #numericInput
 		# Radio buttons for gender
 			selectInput("sex",
@@ -68,7 +74,7 @@ fixedPage(
 							"Dose (mg):",
 							min = 0, max = 1000, value = 500, step = 100
 						),  #sliderInput
-					# Slider input for oral dose frequency
+					# Select input for oral dose frequency
 						selectInput("potimes",
 							"Dosing Frequency:",
 							choices = list(
@@ -78,7 +84,12 @@ fixedPage(
 								"Four times a day (every 6 hours)" = 4
 							),
 							selected = 1
-						)  #selectInput
+						),  #selectInput
+					# Numeric input for start time of oral dosing
+						numericInput("postart",
+							"Start Time (hours):",
+							min = 0, max = 120, value = 0, step = 1
+						)	#numericInput
 					)	#conditionalPanel
 				),	#column
 				column(4,
@@ -115,11 +126,13 @@ fixedPage(
 							selected = 1,
 							inline = TRUE
 						),  #sliderInput
-					# Slider input for IV infusion starting time
+					# Numeric input for IV infusion starting time
 						numericInput("inftimes",
 							"Start Time (hours):",
 							min = 0, max = 120, value = 72, step = 1
-						)  #sliderInput
+						),  #numericInput
+					# Text output for IV infusion rate
+						textOutput("infrate")
 					)	#conditionalPanel
 				)	#column
 			)	#fixedRow

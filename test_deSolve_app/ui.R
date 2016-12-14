@@ -19,6 +19,7 @@ fixedPage(
 	sidebarLayout(
 		sidebarPanel(
 		# Covariates
+			h4("Patient Information"),
 		# Slider input for age
 			numericInput("age",
 				"Age (years):",
@@ -29,32 +30,52 @@ fixedPage(
 				"Total body weight (kg):",
 				min = 0, max = 150, value = 70
 			),  #numericInput
-		# Slider input for serum creatinine
-			numericInput("secr",
-				"Serum creatinine (µmol/L):",
-				min = 0, max = 400, value = 60, step = 1
-			),  #numericInput
 		# Radio buttons for gender
 			selectInput("sex",
 				"Gender:",
 				choices = list(
 					"Male" = 0,
-					"Female" = 1),
+					"Female" = 1
+				),
 				selected = 1
-			),  #radioButtons
+			),  #selectInput
+		# Numeric input for serum creatinine
+			numericInput("secr",
+				"Serum creatinine (µmol/L):",
+				min = 0, max = 400, value = 60, step = 1
+			),  #numericInput
+		# Display creatinine clearance from input
+			textOutput("crcl"),
+			br(),
 		# Radio buttons for smoking status
 			radioButtons("smok",
 				"Smoking Status:",
 				choices = list(
 					"Not a Current Smoker" = 0,
-					"Current Smoker" = 1),
+					"Current Smoker" = 1
+				),
 				selected = 1
 			),  #radioButtons
-		# Slider input for number of individuals
-			sliderInput("n",
+			hr(),
+			h4("Simulation Options"),
+		# Radio buttons for number of individuals
+			radioButtons("n",
 				"Number of Individuals:",
-				min = 10, max = 1000, value = 10, step = 10
-			)  #sliderInput
+				choices = list(
+					"10" = 10,
+					"100" = 100
+				),
+				selected = 10,
+				inline = TRUE
+			),  #radioButton
+			checkboxInput("logscale", "Plot concentrations on a log-scale", value = FALSE),	#checkboxInput
+			selectInput("ci",
+				"Prediction Intervals:",
+				choices = list(
+					"80% (10th - 90th percentiles)" = 1,
+					"90% (5th - 95th percentiles)" = 2
+				)
+			)	#selectInput
 		),  #sidebarPanel
 
 	# Main panel to contain the concentration versus time plot
@@ -115,15 +136,15 @@ fixedPage(
 					# Slider input for IV infusion dose
 						sliderInput("infdose",
 							"Dose (mg):",
-							min = 0, max = 4000, value = 2000, step = 400
+							min = 0, max = 1000, value = 200, step = 100
 						),  #sliderInput
 					# Slider input for IV infusion duration
 						radioButtons("infdur",
 							"Duration (hours):",
 							choices = list(
-								"30 minutes" = 1,
-								"2 hours" = 2),
-							selected = 1,
+								"2 hours" = 2,
+								"12 hours" = 12),
+							selected = 2,
 							inline = TRUE
 						),  #sliderInput
 					# Numeric input for IV infusion starting time

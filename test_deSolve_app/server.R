@@ -18,7 +18,7 @@ shinyServer(function(input, output, session) {
 	sim.data <- reactive({
 	# Create a parameter dataframe with ID and parameter values for each individual
 	# Define individual
-	  n <- input$n  #Number of "individuals"
+	  n <- as.numeric(input$n)  #Number of "individuals"
 	  ID <- seq(from = 1, to = n, by = 1)  #Simulation ID
 	  WT <- input$wt  #Total body weight, kg
 	  AGE <- input$age  #Age, years
@@ -110,8 +110,7 @@ shinyServer(function(input, output, session) {
 			inf.start <- 0
 		} else {
 			inf.dose <- input$infdose  #mg
-		  if (input$infdur == 1) inf.dur <- 0.5   #hours
-			if (input$infdur == 2) inf.dur <- 2
+		  inf.dur <- as.numeric(input$infdur)
 			inf.start <- input$inftimes
 		}
 	  inf.rate <- inf.dose/inf.dur
@@ -156,23 +155,34 @@ shinyServer(function(input, output, session) {
 	# Generate a plot of the sim.data
 	  plotobj <- NULL
 	  plotobj <- ggplot(data = sim.data())
-	#  plotobj <- plotobj + stat_summary(aes(x = time, y = DV), fun.ymin = CIlow,
-	#    fun.ymax = CIhi, geom = "ribbon", fill = "blue", alpha = 0.2)
-	  plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED), fun.ymin = CIlow,
-	    fun.ymax = CIhi, geom = "ribbon", fill = "red", alpha = 0.3)
+		if (input$ci == 1) {
+			plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED), fun.ymin = CI80lo, fun.ymax = CI80hi, geom = "ribbon", fill = "red", alpha = 0.3)
+		} else {
+			plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED), fun.ymin = CI90lo, fun.ymax = CI90hi, geom = "ribbon", fill = "red", alpha = 0.3)
+		}
 	  plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED),
 	    fun.y = median, geom = "line", size = 1, colour = "red")
-	  plotobj <- plotobj + scale_y_continuous("Concentration (mg/L) \n",
+	  if (input$logscale == FALSE) {
+			plotobj <- plotobj + scale_y_continuous("Concentration (mg/L) \n",
 	    breaks = seq(from = 0, to = max(sim.data()$IPRED), by = ceiling(max(sim.data()$IPRED)/10)), lim = c(0, max(sim.data()$IPRED)))
+		} else {
+			plotobj <- plotobj + scale_y_log10("Concentration (mg/L) \n",
+			breaks = c(0.01,0.1,1,10), labels = c(0.01,0.1,1,10), lim = c(NA, max(sim.data()$IPRED)))
+		}
 	  plotobj <- plotobj + scale_x_continuous("\nTime (hours)", lim = c(0, 120), breaks = seq(from = 0,to = 120,by = 24))
 	  print(plotobj)
 	})	#renderPlot
 
 	output$infrate <- renderText({
-		if (input$infdur == 1) inf.dur <- 0.5   #hours
-		if (input$infdur == 2) inf.dur <- 2
-		paste("Infusion rate =", signif(input$infdose/inf.dur, digits = 3) ,"mg/hr")
+		inf.dur <- as.numeric(input$infdur)
+		paste0("Infusion rate = ", signif(input$infdose/inf.dur, digits = 3) ," mg/hr")
 	})	#renderText
+
+	output$crcl <- renderText({
+		crcl <- ((140 - input$age)*input$wt)/(input$secr*0.815)
+		if (input$sex == 1) crcl <- ((140 - input$age)*input$wt)/(input$secr*0.815)*0.85
+		paste0("Creatinine clearance = ", signif(crcl, digits = 3), " mL/min")
+	})
 
 	#############
   ##_SESSION_##

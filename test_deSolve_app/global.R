@@ -14,9 +14,13 @@
 # ggplot2 theme for plotting
 	theme_bw2 <- theme_set(theme_bw(base_size = 16))
 
-# Function for calculating 5th and 95th percentiles for plotting concentrations
-	CIlow <- function(x) quantile(x, probs = 0.05)
-	CIhi <- function(x) quantile(x, probs = 0.95)
+# Function for calculating prediction intervals for plotting concentrations based on reactive input
+	# 90% prediction intervals
+		CI80lo <- function(x) quantile(x, probs = 0.1)
+		CI80hi <- function(x) quantile(x, probs = 0.9)
+	# 95% prediction intervals
+		CI90lo <- function(x) quantile(x, probs = 0.05)
+		CI90hi <- function(x) quantile(x, probs = 0.95)	
 
 # TIME range - times where a concentration will be calculated
 	set.time <- seq(from = 0, to = 120, by = 0.25)

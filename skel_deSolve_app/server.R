@@ -12,19 +12,19 @@
 # Proportional error model (with optional additive residual)
 #-------------------------------------------------------------------------------
 # Define user-input dependent functions for output
-shinyServer(function(input, output, session) {
+shinyServer(function(input, output) {
 # Reactive expression to generate a reactive data frame
 # Whenever an input changes this function re-evaluates
 	Rpar.data <- reactive({
 	# Create a parameter dataframe with ID and parameter values for each individual
 	# Define individual
-	  n <- as.numeric(input$n)  #Number of "individuals"
+	  n <- 10  #Number of "individuals"
 	  ID <- seq(from = 1, to = n, by = 1)  #Simulation ID
 	  WT <- input$wt  #Total body weight, kg
 	  AGE <- input$age  #Age, years
-	  SECR <- input$secr  #Serum Creatinine, umol/L
-	  SEX <- input$sex  #Gender, Male (0) Female (1)
-	  SMOK <- input$smok  #Smoking Status, Not Current (0) Current (1)
+	  SECR <- 60  #Serum Creatinine, umol/L
+	  SEX <- 1  #Gender, Male (0) Female (1)
+	  SMOK <- 0  #Smoking Status, Not Current (0) Current (1)
 
 	# Now use multivariate rnorm to turn the covariance matrix into ETA values
 	  ETAmat <- mvrnorm(n = n, mu = c(0, 0, 0), OMEGA)
@@ -60,48 +60,17 @@ shinyServer(function(input, output, session) {
 
 #------------------------------------------------------------------------------
 	Rsim.data <- reactive({
-	# Specify oral doses
-	# this uses the option to specify "events" in deSolve using a dataframe
-		if (input$pocheck == FALSE) {
-			oral.dose <- 0
-			oral.dose.times <- 0
-		} else {
-			oral.dose <- input$podose
-			if (input$potimes == 1) pofreq <- 24
-			if (input$potimes == 2) pofreq <- 12
-			if (input$potimes == 3) pofreq <- 8
-			if (input$potimes == 4) pofreq <- 6
-			oral.dose.times <- seq(from = input$postart, to = 120, by = pofreq)
-		}
+		##########
+		##_ORAL_##
+		##########
 
-	# Define bolus dose events
-	# below works for constant dosing
-		oral.dose.data <- data.frame(
-			var = 1,  #enters into depot compartment (A[1])
-	    time = oral.dose.times,
-	    value = oral.dose,
-	    method = "add"
-		)
-
-	# Specify bolus intravenous doses
-	# specifies "events" as seen in oral dosing
-		if (input$ivcheck == FALSE) {
-			iv.dose <- 0
-			iv.dose.times <- 0
-		} else {
-			iv.dose <- input$ivdose  #mg for first bolus dose
-		  iv.dose.times <- input$ivtimes  #time of first bolus (h)
-		}
-
-	# Define bolus dose events
-		iv.dose.data <- data.frame(
-			var = 2,  #enters into central compartment (A[2])
-	    time = iv.dose.times,
-	    value = iv.dose,
-	    method = "add")
+		########
+		##_IV_##
+		########
 
 	# Combine dose data
-		all.dose.data <- rbind(oral.dose.data, iv.dose.data)
+		# all.dose.data <- rbind(oral.dose.data, iv.dose.data)
+		all.dose.data <- data.frame(var = 1, time = 0, value = 0, method = "add")
 
 	# Define continuous infusion
 	  #this uses the approxfun function
@@ -119,7 +88,7 @@ shinyServer(function(input, output, session) {
 		inf.times <- c(inf.start, inf.start + inf.dur)
 
 	# Make a time sequence (hours)
-		all.times <- sort(unique(c(set.time, oral.dose.times, iv.dose.times, inf.times)))
+		all.times <- sort(unique(c(set.time, inf.times))) #, oral.dose.times, iv.dose.times)))
 		final.time <- max(all.times)
 		#The time sequence must include all "event" times for deSolve, so added here
 		#Do not repeat a time so use "unique" as well
@@ -135,41 +104,42 @@ shinyServer(function(input, output, session) {
 	# Apply simulate.conc.cmpf to each individual in par.data
 	# Maintain their individual values for V1, SEX and WT for later calculations
 	  sim.data <- ddply(Rpar.data(), .(ID, V1), simulate.conc.cmpf,
-			event.data = all.dose.data, times = all.times,
-			inf.rate.fun = inf.rate.fun(inf.time.data, inf.rate.data))
+			times = all.times, event.data = all.dose.data,
+			inf.rate.fun = inf.rate.fun(inf.time.data, inf.rate.data)
+		)
 
 	# Calculate individual concentrations in the central compartment
 	  sim.data$IPRED <- sim.data$A2/sim.data$V1
 		return(sim.data)
 	})	#Rsim.data
 
-#----------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 #Generate a plot of the data
 #Also uses the inputs to build the plot
 	output$plotconc <- renderPlot({
 	# Generate a plot of the sim.data
 	  plotobj <- NULL
 	  plotobj <- ggplot(data = Rsim.data())
-		if (input$ci == 1) {
-			plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED),
-				fun.ymin = CI80lo, fun.ymax = CI80hi, geom = "ribbon",
-				fill = "red", alpha = 0.3)
-		} else {
-			plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED),
-				fun.ymin = CI90lo, fun.ymax = CI90hi, geom = "ribbon",
-				fill = "red", alpha = 0.3)
-		}
+
+		########
+		##_CI_##
+		########
+
+		plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED),
+			fun.ymin = CI80lo, fun.ymax = CI80hi, geom = "ribbon",
+			fill = "red", alpha = 0.3)
+
 	  plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED),
 	    fun.y = median, geom = "line", size = 1, colour = "red")
-	  if (input$logscale == FALSE) {
-			plotobj <- plotobj + scale_y_continuous("Concentration (mg/L) \n",
-	    	breaks = seq(from = 0, to = max(Rsim.data()$IPRED), by = ceiling(max(Rsim.data()$IPRED)/10)),
-				lim = c(0, max(Rsim.data()$IPRED)))
-		} else {
-			plotobj <- plotobj + scale_y_log10("Concentration (mg/L) \n",
-				breaks = c(0.01,0.1,1,10), labels = c(0.01,0.1,1,10),
-				lim = c(NA, max(Rsim.data()$IPRED)))
-		}
+
+		#########
+		##_LOG_##
+		#########
+
+		plotobj <- plotobj + scale_y_continuous("Concentration (mg/L) \n",
+    breaks = seq(from = 0, to = max(Rsim.data()$IPRED),
+			by = ceiling(max(Rsim.data()$IPRED)/10)), lim = c(0, max(Rsim.data()$IPRED)))
+
 	  plotobj <- plotobj + scale_x_continuous("\nTime (hours)", lim = c(0, 120),
 			breaks = seq(from = 0,to = 120,by = 24))
 	  print(plotobj)
@@ -180,29 +150,8 @@ shinyServer(function(input, output, session) {
 		paste0("Infusion rate = ", signif(input$infdose/inf.dur, digits = 3) ," mg/hr")
 	})	#renderText
 
-	output$crcl <- renderText({
-		crcl <- ((140 - input$age)*input$wt)/(input$secr*0.815)
-		if (input$sex == 1) crcl <- ((140 - input$age)*input$wt)/(input$secr*0.815)*0.85
-		paste0("Creatinine clearance = ", signif(crcl, digits = 3), " mL/min")
-	})
-
-	#############
-  ##_SESSION_##
-  #############
-  # Close the R session when Chrome closes
-  session$onSessionEnded(function() {
-    stopApp()
-  })
-
-	# Open console for R session
-	observe(label = "console", {
-		if(input$console != 0) {
-			options(browserNLdisabled = TRUE)
-			saved_console <- ".RDuetConsole"
-			if (file.exists(saved_console)) load(saved_console)
-			isolate(browser())
-			save(file = saved_console, list = ls(environment()))
-		}
-	})
+	##########
+  ##_CRCL_##
+  ##########
 
 })	#shinyServer

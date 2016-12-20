@@ -87,6 +87,33 @@ fixedPage(
 			hr(),
 			fixedRow(
 				column(4,
+				# IV Infusion Dosing
+					checkboxInput("infcheck", "IV Infusion Dosing", FALSE),
+					conditionalPanel(condition = "input.infcheck == true",
+					# Slider input for IV infusion dose
+						sliderInput("infdose",
+							"Dose (mg):",
+							min = 0, max = 1000, value = 500, step = 100
+						),  #sliderInput
+					# Slider input for IV infusion duration
+						radioButtons("infdur",
+							"Duration (hours):",
+							choices = list(
+								"2 hours" = 2,
+								"12 hours" = 12),
+							selected = 2,
+							inline = TRUE
+						),  #sliderInput
+					# Numeric input for IV infusion starting time
+						numericInput("inftimes",
+							"Start Time (hours):",
+							min = 0, max = 120, value = 72, step = 1
+						),  #numericInput
+					# Text output for IV infusion rate
+						textOutput("infrate")
+					)	#conditionalPanel
+				),	#column
+				column(4,
 				# Oral Dosing
 					checkboxInput("pocheck", "Oral Dosing", value = FALSE),
 					conditionalPanel(condition = "input.pocheck",
@@ -127,33 +154,6 @@ fixedPage(
 							"Dose Time (hours):",
 							min = 0, max = 120, value = 0
 						)  #numericInput
-					)	#conditionalPanel
-				),	#column
-				column(4,
-				# IV Infusion Dosing
-					checkboxInput("infcheck", "IV Infusion Dosing", FALSE),
-					conditionalPanel(condition = "input.infcheck == true",
-					# Slider input for IV infusion dose
-						sliderInput("infdose",
-							"Dose (mg):",
-							min = 0, max = 1000, value = 200, step = 100
-						),  #sliderInput
-					# Slider input for IV infusion duration
-						radioButtons("infdur",
-							"Duration (hours):",
-							choices = list(
-								"2 hours" = 2,
-								"12 hours" = 12),
-							selected = 2,
-							inline = TRUE
-						),  #sliderInput
-					# Numeric input for IV infusion starting time
-						numericInput("inftimes",
-							"Start Time (hours):",
-							min = 0, max = 120, value = 72, step = 1
-						),  #numericInput
-					# Text output for IV infusion rate
-						textOutput("infrate")
 					)	#conditionalPanel
 				)	#column
 			)	#fixedRow

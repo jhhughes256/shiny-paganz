@@ -10,7 +10,7 @@
 #   Gender & Creatinine Clearance on CL
 
 # Proportional error model (with optional additive residual)
-#-------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Define user-input dependent functions for output
 shinyServer(function(input, output) {
 # Reactive expression to generate a reactive data frame
@@ -18,25 +18,26 @@ shinyServer(function(input, output) {
 	Rpar.data <- reactive({
 	# Create a parameter dataframe with ID and parameter values for each individual
 	# Define individual
-	  n <- 10  #Number of "individuals"
-	  ID <- seq(from = 1, to = n, by = 1)  #Simulation ID
-	  WT <- input$wt  #Total body weight, kg
-	  AGE <- input$age  #Age, years
-	  SECR <- 60  #Serum Creatinine, umol/L
-	  SEX <- 1  #Gender, Male (0) Female (1)
-	  SMOK <- 0  #Smoking Status, Not Current (0) Current (1)
+	  n <- 10  # Number of "individuals"
+	  ID <- seq(from = 1, to = n, by = 1)  # Simulation ID
+	  WT <- input$wt  # Total body weight, kg
+	  AGE <- input$age  # Age, years
+	  SECR <- 60  # Serum Creatinine, umol/L
+	  SEX <- 1  # Gender, Male (0) Female (1)
+	  SMOK <- 0  # Smoking Status, Not Current (0) Current (1)
 
 	# Now use multivariate rnorm to turn the covariance matrix into ETA values
+	# Generate random samples from multivariate distribution
 	  ETAmat <- mvrnorm(n = n, mu = c(0, 0, 0), OMEGA)
-	  ETA1 <- ETAmat[, 1]
+	  ETA1 <- ETAmat[, 1]  # Take first column of matrix
 	  ETA2 <- ETAmat[, 2]
 	  ETA3 <- ETAmat[, 3]
 
 	# Define covariate effects
 	  SMOKCOV <- 1
-	  if(SMOK == 1) SMOKCOV <- SMOKCOV + COV1
+	  if (SMOK == 1) SMOKCOV <- SMOKCOV + COV1
 	  CRCL <- ((140 - AGE)*WT)/(SECR*0.815)  # Male creatinine clearance
-	  if(SEX == 1) CRCL <- CRCL*0.85  #Female creatinine clearance
+	  if (SEX == 1) CRCL <- CRCL*0.85  # Female creatinine clearance
 
 	# Define individual parameter values
 	  CL <- CLPOP*exp(ETA1)*((WT/70)^0.75)*SMOKCOV*((CRCL/90)^COV2)
@@ -52,14 +53,15 @@ shinyServer(function(input, output) {
 
 	# Collect the individual parameter values in a parameter dataframe
 	  par.data <- data.frame(
-	    ID, CL, V1, Q, V2,  #patient parameters
-	    KA, K12, K21, K10,  #rate constants
-	    WT, AGE, SECR, SEX, SMOK #covariates
+	    ID, CL, V1, Q, V2,  # Patient parameters
+	    KA, K12, K21, K10,  # Rate constants
+	    WT, AGE, SECR, SEX, SMOK # Covariates
 		)
-	})  #Rpar.data
+	})  # Rpar.data
 
 #------------------------------------------------------------------------------
 	Rsim.data <- reactive({
+
 		##########
 		##_ORAL_##
 		##########
@@ -68,13 +70,12 @@ shinyServer(function(input, output) {
 		##_IV_##
 		########
 
-	# Combine dose data
-		# all.dose.data <- rbind(oral.dose.data, iv.dose.data)
+	# Set blank event data for deSolve
+	# Currently no IV bolus or oral dosing events
 		all.dose.data <- data.frame(var = 1, time = 0, value = 0, method = "add")
 
-	# Define continuous infusion
-	  #this uses the approxfun function
-		#makes a "forcing function" for infusion rate in the differential equations
+	# Define infusion using input parameters
+	# If statement for checkbox ui
 		if (input$infcheck == FALSE) {
 			inf.dose <- 0
 			inf.dur <- 0
@@ -90,19 +91,17 @@ shinyServer(function(input, output) {
 	# Make a time sequence (hours)
 		all.times <- sort(unique(c(set.time, inf.times))) #, oral.dose.times, iv.dose.times)))
 		final.time <- max(all.times)
-		#The time sequence must include all "event" times for deSolve, so added here
-		#Do not repeat a time so use "unique" as well
+		# The time sequence must include all "event" times for deSolve, so added here
+		# Do not repeat a time so use "unique" as well
 
-	# Calculate continuous infusion
-		#if infusion starts at zero, starting 0 is not required
-	  #100 at end ensures the function works after 82 hours
-	  inf.time.data <- c(0, inf.times, final.time)
+	# Specify infusion event times and corresponding rates
+	# Note - inf.times vector of 2 values, inf.rate vector of 1 value
+    inf.time.data <- c(0, inf.times, final.time)
 		inf.rate.data <- c(0, inf.rate, 0, 0)
 
 #------------------------------------------------------------------------------
-
 	# Apply simulate.conc.cmpf to each individual in par.data
-	# Maintain their individual values for V1, SEX and WT for later calculations
+	# Maintain their individual values for V1 for later calculations
 	  sim.data <- ddply(Rpar.data(), .(ID, V1), simulate.conc.cmpf,
 			times = all.times, event.data = all.dose.data,
 			inf.rate.fun = inf.rate.fun(inf.time.data, inf.rate.data)
@@ -114,8 +113,8 @@ shinyServer(function(input, output) {
 	})	#Rsim.data
 
 #-------------------------------------------------------------------------------
-#Generate a plot of the data
-#Also uses the inputs to build the plot
+# Generate a plot of the data
+# Also uses the inputs to build the plot
 	output$plotconc <- renderPlot({
 	# Generate a plot of the sim.data
 	  plotobj <- NULL
@@ -124,11 +123,12 @@ shinyServer(function(input, output) {
 		########
 		##_CI_##
 		########
-
+	# Shaded ribbon for prediction intervals
 		plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED),
 			fun.ymin = CI80lo, fun.ymax = CI80hi, geom = "ribbon",
 			fill = "red", alpha = 0.3)
 
+	# Solid line for median
 	  plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED),
 	    fun.y = median, geom = "line", size = 1, colour = "red")
 
@@ -136,15 +136,19 @@ shinyServer(function(input, output) {
 		##_LOG_##
 		#########
 
+	# Continuous y axis
 		plotobj <- plotobj + scale_y_continuous("Concentration (mg/L) \n",
     breaks = seq(from = 0, to = max(Rsim.data()$IPRED),
 			by = ceiling(max(Rsim.data()$IPRED)/10)), lim = c(0, max(Rsim.data()$IPRED)))
 
+	# Continuous x axis
 	  plotobj <- plotobj + scale_x_continuous("\nTime (hours)", lim = c(0, 120),
 			breaks = seq(from = 0,to = 120,by = 24))
+
 	  print(plotobj)
 	})	#renderPlot
 
+# Render text for infusion rate calculation
 	output$infrate <- renderText({
 		inf.dur <- as.numeric(input$infdur)
 		paste0("Infusion rate = ", signif(input$infdose/inf.dur, digits = 3) ," mg/hr")

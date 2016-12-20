@@ -32,7 +32,7 @@
   ##_CRCL_##
   ##########
 
-  #add crcl reactive text output
+  # Add crcl reactive text output
   crcl <- ((140 - input$age)*input$wt)/(input$secr*0.815)
   if (input$sex == 1) crcl <- ((140 - input$age)*input$wt)/(input$secr*0.815)*0.85
   paste0("Creatinine clearance = ", signif(crcl, digits = 3), " mL/min")
@@ -45,7 +45,7 @@
   ##########
 
 # Specify oral doses
-# this uses the option to specify "events" in deSolve using a dataframe
+# This uses the option to specify "events" in deSolve using a dataframe
 	if (input$pocheck == FALSE) {
 		oral.dose <- 0
 		oral.dose.times <- 0
@@ -58,9 +58,9 @@
 		oral.dose.times <- seq(from = input$postart, to = 120, by = pofreq)
 	}
 # Define bolus dose events
-# below works for constant dosing
+# Below works for constant dosing
 	oral.dose.data <- data.frame(
-		var = 1,  #enters into depot compartment (A[1])
+		var = 1,  # Enters into depot compartment (A[1])
     time = oral.dose.times,
     value = oral.dose,
     method = "add"
@@ -71,18 +71,23 @@
   ########
 
 # Specify bolus intravenous doses
-# specifies "events" as seen in oral dosing
+# Specifies "events" as seen in oral dosing
 	if (input$ivcheck == FALSE) {
 		iv.dose <- 0
 		iv.dose.times <- 0
 	} else {
-		iv.dose <- input$ivdose  #mg for first bolus dose
-	  iv.dose.times <- input$ivtimes  #time of first bolus (h)
+		iv.dose <- input$ivdose  # First bolus dose (mg)
+	  iv.dose.times <- input$ivtimes  # Time of first bolus (h)
 	}
 
 # Define bolus dose events
 	iv.dose.data <- data.frame(
-		var = 2,  #enters into central compartment (A[2])
+		var = 2,  # Enters into central compartment (A[2])
     time = iv.dose.times,
     value = iv.dose,
     method = "add")
+
+# EXTRA
+
+# Combine dose data
+  all.dose.data <- rbind(oral.dose.data, iv.dose.data)

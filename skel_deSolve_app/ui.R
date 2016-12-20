@@ -12,7 +12,7 @@ fixedPage(
 # Sidebar panel with widgets
 	sidebarLayout(
 		sidebarPanel(
-		# Covariates
+	# Covariates
 			h4("Patient Information"),
 		# Slider input for age
 			numericInput("age",
@@ -34,7 +34,7 @@ fixedPage(
 
 		# Radio buttons for smoking status
 
-    # Heading for simulation options and horizontal line
+  # Heading for simulation options and horizontal line
 
 		# Radio buttons for number of individuals
 

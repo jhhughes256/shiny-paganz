@@ -1,4 +1,16 @@
-# PLOT SERVER CODE
+# Covariate Server Code
+
+  ##########
+  ##_CRCL_##
+  ##########
+
+  # Add crcl reactive text output
+  crcl <- ((140 - input$age)*input$wt)/(input$secr*0.815)
+  if (input$sex == 1) crcl <- ((140 - input$age)*input$wt)/(input$secr*0.815)*0.85
+  paste0("Creatinine clearance = ", signif(crcl, digits = 3), " mL/min")
+
+# ------------------------------------------------------------------------------
+# Simulation Options Server Code
 
   ########
   ##_CI_##
@@ -28,17 +40,8 @@
       lim = c(NA, max(Rsim.data()$IPRED)))
   }
 
-  ##########
-  ##_CRCL_##
-  ##########
-
-  # Add crcl reactive text output
-  crcl <- ((140 - input$age)*input$wt)/(input$secr*0.815)
-  if (input$sex == 1) crcl <- ((140 - input$age)*input$wt)/(input$secr*0.815)*0.85
-  paste0("Creatinine clearance = ", signif(crcl, digits = 3), " mL/min")
-
 # ------------------------------------------------------------------------------
-# DOSING SERVER CODE
+# Dosing Server Code
 
   ##########
   ##_ORAL_##

@@ -6,7 +6,7 @@
 
   # Add crcl reactive text output
   crcl <- ((140 - input$age)*input$wt)/(input$secr*0.815)
-  if (input$sex == 1) crcl <- ((140 - input$age)*input$wt)/(input$secr*0.815)*0.85
+  if (input$sex == 0) crcl <- ((140 - input$age)*input$wt)/(input$secr*0.815)*0.85
   paste0("Creatinine clearance = ", signif(crcl, digits = 3), " mL/min")
 
 # ------------------------------------------------------------------------------
@@ -18,11 +18,13 @@
 
   # Code for switching between levels of prediction intervals
   if (input$ci == 1) {
-    plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED), fun.ymin = CI80lo,
-      fun.ymax = CI80hi, geom = "ribbon", fill = "red", alpha = 0.3)
+    plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED),
+      fun.ymin = CI80lo, fun.ymax = CI80hi,
+      geom = "ribbon", fill = "red", alpha = 0.3)
   } else {
-    plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED), fun.ymin = CI90lo,
-      fun.ymax = CI90hi, geom = "ribbon", fill = "red", alpha = 0.3)
+    plotobj <- plotobj + stat_summary(aes(x = time, y = IPRED),
+      fun.ymin = CI90lo, fun.ymax = CI90hi,
+      geom = "ribbon", fill = "red", alpha = 0.3)
   }
 
   #########

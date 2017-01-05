@@ -37,7 +37,7 @@ shinyServer(function(input, output) {
 	  SMOKCOV <- 1
 	  if (SMOK == 1) SMOKCOV <- SMOKCOV + COV1
 	  CRCL <- ((140 - AGE)*WT)/(SECR*0.815)  # Male creatinine clearance
-	  if (SEX == 1) CRCL <- CRCL*0.85  # Female creatinine clearance
+	  if (SEX == 0) CRCL <- CRCL*0.85  # Female creatinine clearance
 
 	# Define individual parameter values
 	  CL <- CLPOP*exp(ETA1)*((WT/70)^0.75)*SMOKCOV*((CRCL/90)^COV2)

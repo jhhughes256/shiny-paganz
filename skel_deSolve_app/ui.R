@@ -69,7 +69,7 @@ fixedPage(
 								"12 hours" = 12),
 							selected = 2,
 							inline = TRUE
-						),  #sliderInput
+						),  #radioButtons
 					# Numeric input for IV infusion starting time
 						numericInput("inftimes",
 							"Start Time (hours):",

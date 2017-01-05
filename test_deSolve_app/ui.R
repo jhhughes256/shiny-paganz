@@ -30,16 +30,16 @@ fixedPage(
 				"Total body weight (kg):",
 				min = 0, max = 150, value = 70
 			),  #numericInput
-		# Radio buttons for gender
+		# Select Input for gender
 			selectInput("sex",
 				"Gender:",
 				choices = list(
-					"Male" = 0,
-					"Female" = 1
+					"Male" = 1,
+					"Female" = 0
 				),
 				selected = 1
-			),  #selectInput
-		# Numeric input for serum creatinine
+    	),  #selectInput
+    # Numeric input for serum creatinine
 			numericInput("secr",
 				"Serum creatinine (µmol/L):",
 				min = 0, max = 400, value = 60, step = 1
